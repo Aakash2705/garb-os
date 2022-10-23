@@ -33,13 +33,11 @@ bootl:
 	int 0x13
 	jc .disk_fail
 
-	; mov ah, 0x00
-	; mov al, 0x10
-	; int 0x10
+	mov ah, 0x00
+	mov al, 0x10
+	int 0x10
 
-	jmp 0x50:0x0
-
-	hlt
+	call init_pm
 
 .disk_fail:
 	mov si, disk_fail_msg
@@ -48,6 +46,19 @@ bootl:
 	cli
 	hlt
 
+
+%include "src/boot/gdt.asm"
+init_pm:
+	cli
+	lgdt [gdt_descriptor]
+
+	mov eax, cr0
+	or eax, 0x1
+	mov cr0, eax
+
+	jmp CODE_SEG:begin_pm
+
+	hlt
 
 ; prints to screen
 ; takes si as pointer to string
@@ -69,6 +80,19 @@ puts:
 
 hello_msg: db "WELCOME TO GARB OS", endl 
 disk_fail_msg: db "DISK READ FAILED", endl
+
+[bits 32]
+begin_pm:
+	mov ax, DATA_SEG
+	mov ds, ax
+	mov ss, ax
+	mov es, ax
+	mov fs, ax
+
+	mov ebp, 0x90000
+	mov esp, ebp
+
+	hlt
 
 times 510 - ($ - $$) db 0
 dw 0xaa55
